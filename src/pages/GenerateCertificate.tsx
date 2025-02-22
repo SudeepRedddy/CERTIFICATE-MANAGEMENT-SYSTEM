@@ -68,11 +68,11 @@ const GenerateCertificate = () => {
     }
 
     // Elegant border design
-    pdf.setDrawColor(41, 128, 185);
-    pdf.setLineWidth(0.5);
+    // pdf.setDrawColor(41, 128, 185);
+    // pdf.setLineWidth(0.5);
     
     // Outer border
-    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+    // pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
     
     // Inner border with decorative corners
     pdf.setLineWidth(0.3);
@@ -100,8 +100,8 @@ const GenerateCertificate = () => {
     pdf.line(pageWidth - cornerMargin, pageHeight - cornerMargin - cornerSize, pageWidth - cornerMargin, pageHeight - cornerMargin);
 
     // Header with improved design
-    pdf.setFillColor(41, 128, 185, 0.1);
-    pdf.rect(0, 20, pageWidth, 40, 'F');
+    // pdf.setFillColor(41, 128, 185, 0.1);
+    // pdf.rect(0, 20, pageWidth, 40, 'F');
     
     // Certificate title
     pdf.setTextColor(41, 128, 185);
@@ -114,7 +114,7 @@ const GenerateCertificate = () => {
     pdf.line(pageWidth / 4, 55, (pageWidth * 3) / 4, 55);
 
     // Certificate content with improved typography and spacing
-    const contentStartY = 85;
+    const contentStartY = 75;
     
     pdf.setTextColor(44, 62, 80);
     pdf.setFontSize(16);
@@ -152,7 +152,12 @@ const GenerateCertificate = () => {
       year: 'numeric'
     });
     pdf.setFontSize(14);
-    pdf.text(`Issued on ${issueDate}`, pageWidth / 2, contentStartY + 85, { align: 'center' });
+    pdf.text(`Issued on ${issueDate}`, pageWidth / 2, contentStartY + 80, { align: 'center' });
+
+    // Certificate ID with improved styling
+    pdf.setFontSize(12);
+    pdf.setTextColor(41, 128, 185);
+    pdf.text(`Certificate ID: ${certId}`, pageWidth / 2, contentStartY + 105, { align: 'center' });
 
     // Enhanced QR code presentation
     const qrSize = 35;
@@ -169,14 +174,10 @@ const GenerateCertificate = () => {
     // QR code label
     pdf.setFontSize(10);
     pdf.setTextColor(44, 62, 80);
-    pdf.text('Scan to verify', qrX + (qrSize / 2), qrY + qrSize + 10, { align: 'center' });
+    // pdf.text('Scan to verify', qrX + (qrSize / 2), qrY + qrSize + 10, { align: 'center' });
 
-    // Certificate ID with improved styling
-    pdf.setFontSize(12);
-    pdf.setTextColor(41, 128, 185);
-    pdf.text(`Certificate ID: ${certId}`, pageWidth - 60, pageHeight - 15);
 
-    // Generate preview URL and PDF data
+    // Generate preview URL
     const pdfBlob = pdf.output('blob');
     const previewUrl = URL.createObjectURL(pdfBlob);
     setPreviewUrl(previewUrl);
@@ -200,35 +201,18 @@ const GenerateCertificate = () => {
       setCertificateId(newCertificateId);
 
       const { pdfBlob } = await generateCertificatePDF(newCertificateId);
-      
-      // Upload PDF to Supabase Storage
-      const filename = `${newCertificateId}.pdf`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('certificates')
-        .upload(filename, pdfBlob, {
-          contentType: 'application/pdf',
-          cacheControl: '3600',
-          upsert: true
-        });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
 
-      if (uploadError) throw uploadError;
-
-      // Get the public URL for the uploaded file
-      const { data: { publicUrl } } = supabase.storage
-        .from('certificates')
-        .getPublicUrl(filename);
-
-      // Save certificate data to the database
-      const { error: dbError } = await supabase.from('certificates').insert({
+      const { error: uploadError } = await supabase.from('certificates').insert({
         certificate_id: newCertificateId,
         student_id: formData.studentId,
         student_name: formData.studentName,
         course: formData.course,
         university: formData.university,
-        pdf_url: publicUrl
+        pdf_url: pdfUrl
       });
 
-      if (dbError) throw dbError;
+      if (uploadError) throw uploadError;
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || 'Failed to generate certificate. Please try again.');
