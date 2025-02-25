@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
-import { FileCheck, Eye, Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { FileCheck, Download, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 
 const GenerateCertificate = () => {
   const [formData, setFormData] = useState({
@@ -14,8 +14,11 @@ const GenerateCertificate = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [certificateId, setCertificateId] = useState<string | null>(null);
+  const [certificateData, setCertificateData] = useState<{
+    id: string;
+    pdfUrl: string;
+    issueDate: string;
+  } | null>(null);
 
   const generateCertificateId = (studentId: string, course: string) => {
     const timestamp = Date.now().toString(36);
@@ -38,20 +41,21 @@ const GenerateCertificate = () => {
   };
 
   const generateCertificatePDF = async (certId: string) => {
-    const qrData = JSON.stringify({
-      certificateId: certId,
-      studentId: formData.studentId,
-      studentName: formData.studentName,
-      course: formData.course,
-      university: formData.university
-    });
+    // Format QR data in line-by-line format instead of JSON
+    const qrData = [
+      `Certificate ID: ${certId}`,
+      `Student ID: ${formData.studentId}`,
+      `Student Name: ${formData.studentName}`,
+      `Course: ${formData.course}`,
+      `University: ${formData.university}`
+    ].join('\n');
 
     const qrCodeDataUrl = await QRCode.toDataURL(qrData);
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // Enhanced background with radial gradient effect
+    // Background with radial gradient
     const centerX = pageWidth / 2;
     const centerY = pageHeight / 2;
     const maxRadius = Math.max(pageWidth, pageHeight);
@@ -67,14 +71,7 @@ const GenerateCertificate = () => {
       pdf.circle(centerX, centerY, r, 'F');
     }
 
-    // Elegant border design
-    // pdf.setDrawColor(41, 128, 185);
-    // pdf.setLineWidth(0.5);
-    
-    // Outer border
-    // pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
-    
-    // Inner border with decorative corners
+    // Border design
     pdf.setLineWidth(0.3);
     const margin = 15;
     pdf.rect(margin, margin, pageWidth - 2 * margin, pageHeight - 2 * margin);
@@ -83,26 +80,22 @@ const GenerateCertificate = () => {
     const cornerSize = 15;
     const cornerMargin = margin + 5;
     
-    // Top left corner decorations
+    // Top left corner
     pdf.line(cornerMargin, cornerMargin, cornerMargin + cornerSize, cornerMargin);
     pdf.line(cornerMargin, cornerMargin, cornerMargin, cornerMargin + cornerSize);
     
-    // Top right corner decorations
+    // Top right corner
     pdf.line(pageWidth - cornerMargin - cornerSize, cornerMargin, pageWidth - cornerMargin, cornerMargin);
     pdf.line(pageWidth - cornerMargin, cornerMargin, pageWidth - cornerMargin, cornerMargin + cornerSize);
     
-    // Bottom left corner decorations
+    // Bottom left corner
     pdf.line(cornerMargin, pageHeight - cornerMargin - cornerSize, cornerMargin, pageHeight - cornerMargin);
     pdf.line(cornerMargin, pageHeight - cornerMargin, cornerMargin + cornerSize, pageHeight - cornerMargin);
     
-    // Bottom right corner decorations
+    // Bottom right corner
     pdf.line(pageWidth - cornerMargin - cornerSize, pageHeight - cornerMargin, pageWidth - cornerMargin, pageHeight - cornerMargin);
     pdf.line(pageWidth - cornerMargin, pageHeight - cornerMargin - cornerSize, pageWidth - cornerMargin, pageHeight - cornerMargin);
 
-    // Header with improved design
-    // pdf.setFillColor(41, 128, 185, 0.1);
-    // pdf.rect(0, 20, pageWidth, 40, 'F');
-    
     // Certificate title
     pdf.setTextColor(41, 128, 185);
     pdf.setFontSize(36);
@@ -113,75 +106,64 @@ const GenerateCertificate = () => {
     pdf.setLineWidth(0.5);
     pdf.line(pageWidth / 4, 55, (pageWidth * 3) / 4, 55);
 
-    // Certificate content with improved typography and spacing
+    // Certificate content
     const contentStartY = 75;
     
     pdf.setTextColor(44, 62, 80);
     pdf.setFontSize(16);
     pdf.setFont(undefined, 'normal');
-    pdf.text('This is to certify that', pageWidth / 2, contentStartY, { align: 'center' });
+    pdf.text('This is to certify that', pageWidth / 2, contentStartY - 10, { align: 'center' });
 
-    // Student name with larger, bold font
+    // Student name
     pdf.setFontSize(32);
     pdf.setTextColor(41, 128, 185);
     pdf.setFont(undefined, 'bold');
-    pdf.text(formData.studentName, pageWidth / 2, contentStartY + 20, { align: 'center' });
+    pdf.text(formData.studentName, pageWidth / 2, contentStartY + 10, { align: 'center' });
 
     // Course completion text
     pdf.setFontSize(16);
     pdf.setTextColor(44, 62, 80);
     pdf.setFont(undefined, 'normal');
-    pdf.text('has successfully completed the course', pageWidth / 2, contentStartY + 35, { align: 'center' });
+    pdf.text('has successfully completed the course', pageWidth / 2, contentStartY + 25, { align: 'center' });
 
-    // Course name with emphasis
+    // Course name
     pdf.setFontSize(28);
     pdf.setTextColor(41, 128, 185);
     pdf.setFont(undefined, 'bold');
-    pdf.text(formData.course, pageWidth / 2, contentStartY + 55, { align: 'center' });
+    pdf.text(formData.course, pageWidth / 2, contentStartY + 45, { align: 'center' });
 
     // University name
     pdf.setFontSize(16);
     pdf.setTextColor(44, 62, 80);
     pdf.setFont(undefined, 'normal');
-    pdf.text(`at ${formData.university}`, pageWidth / 2, contentStartY + 70, { align: 'center' });
+    pdf.text(`at ${formData.university}`, pageWidth / 2, contentStartY + 60, { align: 'center' });
 
-    // Issue date with improved formatting
+    // Issue date
     const issueDate = new Date().toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
     pdf.setFontSize(14);
-    pdf.text(`Issued on ${issueDate}`, pageWidth / 2, contentStartY + 80, { align: 'center' });
+    pdf.text(`Issued on ${issueDate}`, pageWidth / 2, contentStartY + 75, { align: 'center' });
 
-    // Certificate ID with improved styling
+    // Certificate ID
     pdf.setFontSize(12);
     pdf.setTextColor(41, 128, 185);
-    pdf.text(`Certificate ID: ${certId}`, pageWidth / 2, contentStartY + 105, { align: 'center' });
+    pdf.text(`Certificate ID: ${certId}`, pageWidth / 2, contentStartY + 90, {align: 'center'});
 
-    // Enhanced QR code presentation
+    // QR code
     const qrSize = 35;
-    const qrX = 25;
-    const qrY = pageHeight - 60;
+    const qrX = 30;
+    const qrY = pageHeight - 65;
     
-    // QR code background
     pdf.setFillColor(255, 255, 255);
     pdf.roundedRect(qrX - 5, qrY - 5, qrSize + 10, qrSize + 10, 3, 3, 'F');
-    
-    // Add QR code
     pdf.addImage(qrCodeDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
-    
-    // QR code label
-    pdf.setFontSize(10);
-    pdf.setTextColor(44, 62, 80);
-    // pdf.text('Scan to verify', qrX + (qrSize / 2), qrY + qrSize + 10, { align: 'center' });
 
-
-    // Generate preview URL
-    const pdfBlob = pdf.output('blob');
-    const previewUrl = URL.createObjectURL(pdfBlob);
-    setPreviewUrl(previewUrl);
-    return { pdf, pdfBlob, previewUrl };
+    // Convert to base64
+    const pdfBase64 = pdf.output('datauristring');
+    return { pdfBase64, issueDate };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -189,7 +171,7 @@ const GenerateCertificate = () => {
     setLoading(true);
     setError('');
     setSuccess(false);
-    setPreviewUrl(null);
+    setCertificateData(null);
 
     try {
       const isDuplicate = await checkDuplicateCertificate(formData.studentId, formData.course);
@@ -198,10 +180,7 @@ const GenerateCertificate = () => {
       }
 
       const newCertificateId = generateCertificateId(formData.studentId, formData.course);
-      setCertificateId(newCertificateId);
-
-      const { pdfBlob } = await generateCertificatePDF(newCertificateId);
-      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const { pdfBase64, issueDate } = await generateCertificatePDF(newCertificateId);
 
       const { error: uploadError } = await supabase.from('certificates').insert({
         certificate_id: newCertificateId,
@@ -209,10 +188,16 @@ const GenerateCertificate = () => {
         student_name: formData.studentName,
         course: formData.course,
         university: formData.university,
-        pdf_url: pdfUrl
+        pdf_url: pdfBase64
       });
 
       if (uploadError) throw uploadError;
+      
+      setCertificateData({
+        id: newCertificateId,
+        pdfUrl: pdfBase64,
+        issueDate
+      });
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || 'Failed to generate certificate. Please try again.');
@@ -222,9 +207,20 @@ const GenerateCertificate = () => {
     }
   };
 
+  const handleDownload = () => {
+    if (certificateData) {
+      const link = document.createElement('a');
+      link.href = certificateData.pdfUrl;
+      link.download = `certificate-${formData.studentName.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
-      {!previewUrl ? (
+      {!certificateData ? (
         <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
           <div className="flex items-center mb-8">
             <FileCheck className="h-8 w-8 text-blue-600 mr-3" />
@@ -308,10 +304,7 @@ const GenerateCertificate = () => {
                   Generating...
                 </>
               ) : (
-                <>
-                  <Eye className="h-5 w-5 mr-2" />
-                  Generate Certificate
-                </>
+                'Generate Certificate'
               )}
             </button>
           </form>
@@ -324,17 +317,39 @@ const GenerateCertificate = () => {
               Certificate generated successfully!
             </div>
           )}
-          <div className="aspect-[1.414] w-full bg-white rounded-lg overflow-hidden shadow-lg">
-            <iframe
-              src={previewUrl}
-              className="w-full h-full"
-              title="Certificate Preview"
-            />
+          
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Certificate Details</h2>
+              <button
+                onClick={handleDownload}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <Download className="h-5 w-5 mr-2" />
+                Download PDF
+              </button>
+            </div>
+            
+            <div className="mt-4 space-y-2 text-sm text-gray-600">
+              <p>Certificate ID: <span className="font-medium text-gray-900">{certificateData.id}</span></p>
+              <p>Issue Date: <span className="font-medium text-gray-900">{certificateData.issueDate}</span></p>
+            </div>
           </div>
+
+          <div className="aspect-[1.414] w-full bg-white rounded-lg overflow-hidden shadow-lg">
+            <object
+              data={certificateData.pdfUrl}
+              type="application/pdf"
+              className="w-full h-full"
+            >
+              <p>Your browser does not support PDF preview.</p>
+            </object>
+          </div>
+
           <div className="mt-6 flex justify-center">
             <button
               onClick={() => {
-                setPreviewUrl(null);
+                setCertificateData(null);
                 setSuccess(false);
                 setFormData({
                   studentId: '',
@@ -343,8 +358,9 @@ const GenerateCertificate = () => {
                   university: ''
                 });
               }}
-              className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+              className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
             >
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Generate Another Certificate
             </button>
           </div>
