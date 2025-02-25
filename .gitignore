@@ -16,7 +16,7 @@ dist-ssr/
 *.local
 
 # Bolt directory
-.bolt/
+bolt/
 
 # Editor directories and files
 .vscode/
