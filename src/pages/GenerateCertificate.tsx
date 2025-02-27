@@ -22,7 +22,7 @@ const GenerateCertificate = () => {
 
   const generateCertificateId = (studentId: string, course: string) => {
     const timestamp = Date.now().toString(36);
-    return `CERT-${studentId}-${course.substring(0, 3).toUpperCase()}-${timestamp}`.toUpperCase();
+    return `${timestamp}`.toUpperCase();
   };
 
   const checkDuplicateCertificate = async (studentId: string, course: string) => {
